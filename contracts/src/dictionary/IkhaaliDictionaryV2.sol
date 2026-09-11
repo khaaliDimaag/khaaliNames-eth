@@ -32,6 +32,10 @@ interface IkhaaliDictionaryV2 is IkhaaliDeprecationV1 {
 
   ////////// Public Functions //////////
 
+  /// @notice Return the dictionary name as a string only
+  /// @return The name of the dictionary
+  function getDictionaryName() external view returns (string memory);
+
   /// @notice Return the word at a certain index
   /// @param index The zero-based index in the dictionary
   /// @return The word as a string

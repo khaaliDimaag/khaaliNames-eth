@@ -44,6 +44,14 @@ contract khaaliDictionaryV2 is IkhaaliDictionaryV2, khaaliDeprecationV1 {
 
   ////////// Public Functions //////////
 
+  function getDictionaryName()
+    public
+    view
+    returns (string memory)
+  {
+    return dict.NAME;
+  }
+
   function wordLength()
     public
     view
