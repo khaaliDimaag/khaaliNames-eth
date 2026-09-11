@@ -5,7 +5,14 @@ import {SSTORE2} from "solady/utils/SSTORE2.sol";
 import {khaaliDeprecationV1} from "../util/khaaliDeprecationV1.sol";
 import {IkhaaliDictionaryV2, khaaliDictionary} from "./IkhaaliDictionaryV2.sol";
 
-contract khaaliDictionaryV2 is IkhaaliDictionaryV2, khaaliDeprecationV1 {
+import {ERC165} from "../util/ERC165.sol";
+import {IERC165} from "../util/IERC165.sol";
+
+contract khaaliDictionaryV2 is
+  IkhaaliDictionaryV2,
+  ERC165,
+  khaaliDeprecationV1
+{
 
   khaaliDictionary public dict;
   bytes32 public immutable FINGERPRINT;
@@ -127,6 +134,20 @@ contract khaaliDictionaryV2 is IkhaaliDictionaryV2, khaaliDeprecationV1 {
     }
 
     return string(_word);
+  }
+
+  ////////// ERC Functions //////////
+
+  /// @dev explicit calls to avoid mid-chain hops forgetting to call `super`
+  function supportsInterface(bytes4 _id)
+    public
+    view
+    override(khaaliDeprecationV1, ERC165, IERC165)
+    returns (bool)
+  {
+    return _id == type(IkhaaliDictionaryV2).interfaceId
+      || khaaliDeprecationV1.supportsInterface(_id)
+      || ERC165.supportsInterface(_id);
   }
 
 }

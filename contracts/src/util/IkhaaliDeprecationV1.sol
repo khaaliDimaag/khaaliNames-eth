@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: Apache-2.0
 pragma solidity ^0.8.20;
 
+import {IERC165} from "../util/IERC165.sol";
+
 struct Version {
   uint64 major;
   uint64 minor;
@@ -9,8 +11,7 @@ struct Version {
 
 /// @title IkhaaliDeprecation
 /// @notice Small module to handle contract deprecations
-/// @dev Consider supporting ERC-165 in V2
-interface IkhaaliDeprecationV1 {
+interface IkhaaliDeprecationV1 is IERC165 {
 
   enum UpdateKind { UNCHANGED, BREAKING, FEATURE, FIX }
 

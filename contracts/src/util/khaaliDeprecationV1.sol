@@ -2,9 +2,11 @@
 pragma solidity ^0.8.20;
 
 import {IkhaaliDeprecationV1, Version} from "./IkhaaliDeprecationV1.sol";
+import {ERC165} from "./ERC165.sol";
+import {IERC165} from "./IERC165.sol";
 
 /// @dev Marked `abstract` since this is not meant to be standalone
-abstract contract khaaliDeprecationV1 is IkhaaliDeprecationV1 {
+abstract contract khaaliDeprecationV1 is IkhaaliDeprecationV1, ERC165 {
 
   Version _v;
   address public admin;
@@ -130,6 +132,21 @@ abstract contract khaaliDeprecationV1 is IkhaaliDeprecationV1 {
     }
 
     return string(_str);
+  }
+
+
+  ////////// ERC Functions //////////
+
+  /// @dev explicit calls to avoid mid-chain hops forgetting to call `super`
+  function supportsInterface(bytes4 _id)
+    public
+    virtual
+    view
+    override(ERC165, IERC165)
+    returns (bool)
+  {
+    return _id == type(IkhaaliDeprecationV1).interfaceId
+      || ERC165.supportsInterface(_id);
   }
 
 }

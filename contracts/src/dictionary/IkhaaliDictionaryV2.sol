@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 pragma solidity ^0.8.20;
 
+import {IERC165} from "../util/IERC165.sol";
 import {IkhaaliDeprecationV1} from "../util/IkhaaliDeprecationV1.sol";
 
 struct khaaliDictionary {
@@ -13,7 +14,7 @@ struct khaaliDictionary {
 /// @title IkhaaliDictionaryV2
 /// @notice Interface for onchain word dictionaries used by khaaliNames
 /// @dev Consider multi pointer dictionaries for V3
-interface IkhaaliDictionaryV2 is IkhaaliDeprecationV1 {
+interface IkhaaliDictionaryV2 is IERC165, IkhaaliDeprecationV1 {
 
   ////////// Errors //////////
 
