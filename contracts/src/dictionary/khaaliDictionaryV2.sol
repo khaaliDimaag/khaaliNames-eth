@@ -22,7 +22,7 @@ contract khaaliDictionaryV2 is
 
   constructor(
     uint64 _major, uint64 _minor, uint128 _patch,
-    uint32 _length, uint32 _count, address _loc, string memory _name
+    uint32 _length, uint64 _count, address _loc, string memory _name
   )
     khaaliDeprecationV1(_major, _minor, _patch)
   {
@@ -63,7 +63,7 @@ contract khaaliDictionaryV2 is
     public
     view
     undeprecated
-    returns (uint256)
+    returns (uint32)
   {
     return dict.WORD_LENGTH;
   }
@@ -72,7 +72,7 @@ contract khaaliDictionaryV2 is
     public
     view
     undeprecated
-    returns (uint256)
+    returns (uint64)
   {
     return dict.WORD_COUNT;
   }

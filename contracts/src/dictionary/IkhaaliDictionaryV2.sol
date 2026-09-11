@@ -43,10 +43,10 @@ interface IkhaaliDictionaryV2 is IERC165, IkhaaliDeprecationV1 {
   function wordAt(uint256 index) external view returns (string memory);
 
   /// @return The total number of words in the dictionary
-  function wordCount() external view returns (uint256);
+  function wordCount() external view returns (uint64);
 
   /// @return The max byte length for each word
-  function wordLength() external view returns (uint256);
+  function wordLength() external view returns (uint32);
 
 
   ////////// Admin Functions //////////
