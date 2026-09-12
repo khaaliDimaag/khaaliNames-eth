@@ -21,6 +21,19 @@ contract khaaliNamesV2 is IkhaaliNamesV2, ERC165, khaaliDeprecationV1 {
   uint256 public constant MAX_DICTIONARIES = 16;
 
 
+  ////////// Modifiers //////////
+
+  modifier validMilestone(Milestone _m) {
+    _validMilestone(_m);
+    _;
+  }
+
+  function _validMilestone(Milestone _m) internal view {
+    require(_m != Milestone.JUST_DEPLOYED, MilestoneCannotBeZero());
+    require(_m <= maxMilestone, MilestoneTooHigh());
+  }
+
+
   ////////// Initializers //////////
 
   function _setupDefault() private {
@@ -39,8 +52,8 @@ contract khaaliNamesV2 is IkhaaliNamesV2, ERC165, khaaliDeprecationV1 {
 
     if(useDefault) _setupDefault();
     else {
+
       require(_miles.length == uint8(_max), MilestoneMismatch());
-      require(_miles.length <= MAX_MILESTONES, TooManyMilestons());
       require(_dicts.length > 0, DictionaryListEmpty());
       require(_dicts.length <= MAX_DICTIONARIES, TooManyDictionaries());
 
@@ -79,7 +92,7 @@ contract khaaliNamesV2 is IkhaaliNamesV2, ERC165, khaaliDeprecationV1 {
         nameToDict[_hash] = address(_dict);
       }
 
-    }
+    } // close `else` block
 
   }
 
@@ -92,6 +105,8 @@ contract khaaliNamesV2 is IkhaaliNamesV2, ERC165, khaaliDeprecationV1 {
     returns (uint256)
   {
     require(_max != Milestone.JUST_DEPLOYED, MaxMilestoneCannotBeZero());
+    // casting to 'uint8' is safe because max value possible is 16 * 15 = 240
+    // forge-lint: disable-next-line(unsafe-typecast)
     uint8 _boundary = uint8(MAX_DICTIONARIES * uint8(_max));
     return _mask & (2 ** _boundary - 1);
   }
@@ -141,9 +156,9 @@ contract khaaliNamesV2 is IkhaaliNamesV2, ERC165, khaaliDeprecationV1 {
   function getMilestoneDetails(Milestone m)
     public
     view
+    validMilestone(m)
     returns (uint8, uint80, uint16)
   {
-    require(m != Milestone.JUST_DEPLOYED, MilestoneCannotBeZero());
     uint8 index = uint8(m) - 1;
     return (
       index + 1,
@@ -155,14 +170,16 @@ contract khaaliNamesV2 is IkhaaliNamesV2, ERC165, khaaliDeprecationV1 {
   function getDeterministicName(address recepient, Milestone m)
     public
     view
+    validMilestone(m)
     returns (string memory)
   {
     return _generate(recepient, m, 0);
   }
 
-  function getRandomName(address recepient, Milestone m)
+  function getTimestampedName(address recepient, Milestone m)
     public
     view
+    validMilestone(m)
     returns (string memory)
   {
     return _generate(recepient, m, block.timestamp);
@@ -171,11 +188,11 @@ contract khaaliNamesV2 is IkhaaliNamesV2, ERC165, khaaliDeprecationV1 {
   function getSeededName(address recepient, Milestone m, uint256 salt)
     public
     view
+    validMilestone(m)
     returns (string memory)
   {
     return _generate(recepient, m, salt);
   }
-
 
   ////////// Admin Functions //////////
 
@@ -188,6 +205,8 @@ contract khaaliNamesV2 is IkhaaliNamesV2, ERC165, khaaliDeprecationV1 {
     pure
     returns (uint16)
   {
+    // casting to 'uint16' is safe because we only care about 16 bits
+    // forge-lint: disable-next-line(unsafe-typecast)
     return uint16(
       (
         _mask
@@ -199,23 +218,59 @@ contract khaaliNamesV2 is IkhaaliNamesV2, ERC165, khaaliDeprecationV1 {
     );
   }
 
+  // @dev Core generation logic
   function _generate(address _r, Milestone _m, uint256 _s)
-    internal
-    view
-    returns (string memory name)
-  {
-
-  }
-
-  function _pickWord(IkhaaliDictionaryV2 _dict, uint256 _seed, uint256 _salt)
     internal
     view
     returns (string memory)
   {
-    uint64 _count = _dict.wordCount();
-    uint64 _index = uint64(bytes8(keccak256(abi.encodePacked(_seed, _salt))))
-      % _count;
-    return _dict.wordAt(_index);
+    bytes memory _name;
+    uint16 _mask = _getRelevantBits(bitmask, uint8(_m) - 1);
+    uint256 _seed = uint256(
+      keccak256(
+        _s == 0x0 ?
+          abi.encodePacked(_r, uint8(_m))
+          :
+          abi.encodePacked(_r, uint8(_m), _s)
+      )
+    );
+
+    for(uint i=0; i<dictionaries.length; i++) {
+      if(_mask & 2**i != 0) {
+        _name = abi.encodePacked(
+          _name, /// @dev First iteration bytes(_name) == 0x0
+          _pickWord(dictionaries[i], _seed),
+          "-"
+        );
+      }
+    }
+
+    // @dev being extra cautious; prolly unneeded
+    if(_name.length != 0) {
+      // @dev AI generated logic
+      assembly {
+        mstore(_name, sub(mload(_name), 1))
+      }
+    }
+
+    return string(_name);
+  }
+
+  // @dev Pick a word from the given dictionary using the given seed
+  function _pickWord(IkhaaliDictionaryV2 _dict, uint256 _seed)
+    internal
+    view
+    returns (string memory)
+  {
+    return _dict.wordAt(
+      uint64(
+        // casting to 'bytes8' is safe because wordCount is uint64
+        // forge-lint: disable-next-line(unsafe-typecast)
+        bytes8(keccak256(abi.encodePacked(_seed)))
+      )
+      %
+      _dict.wordCount()
+    );
   }
 
 
