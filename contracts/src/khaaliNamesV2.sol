@@ -17,10 +17,17 @@ contract khaaliNamesV2 is IkhaaliNamesV2, ERC165, khaaliDeprecationV1 {
   Milestone public maxMilestone;
   uint256 public bitmask;
 
+  uint256 public constant MAX_MILESTONES = 15;
   uint256 public constant MAX_DICTIONARIES = 16;
 
 
   ////////// Initializers //////////
+
+  function _setupDefault() private {
+    // TODO: color, animal, and adjective dictionaries with V1 milestones
+    // see https://github.com/thisispalash/rootcamp-capstone/blob/account/src/khaaliNamesV1.sol
+    revert Unimplemented();
+  }
 
   constructor (
     uint64 _major, uint64 _minor, uint128 _patch,
@@ -32,13 +39,17 @@ contract khaaliNamesV2 is IkhaaliNamesV2, ERC165, khaaliDeprecationV1 {
 
     if(useDefault) _setupDefault();
     else {
+      require(_miles.length == uint8(_max), MilestoneMismatch());
+      require(_miles.length <= MAX_MILESTONES, TooManyMilestons());
+      require(_dicts.length > 0, DictionaryListEmpty());
+      require(_dicts.length <= MAX_DICTIONARIES, TooManyDictionaries());
 
-      uint256 len = _dicts.length;
-      require(len <= MAX_DICTIONARIES, TooManyDictionaries());
+      uint256 dictsLen = _dicts.length;
 
       /// @dev verify interface implementation first
-      for(uint i=0; i<len; i++) {
+      for(uint i=0; i<dictsLen; i++) {
         require(
+          _dicts[i].code.length > 0 &&
           IERC165(_dicts[i]).supportsInterface(
             type(IkhaaliDictionaryV2).interfaceId
           ),
@@ -47,17 +58,18 @@ contract khaaliNamesV2 is IkhaaliNamesV2, ERC165, khaaliDeprecationV1 {
       }
 
       /// @dev get counts to verify milestone mask before storing
-      uint64[] memory _counts = new uint64[](len);
-      for(uint i=0; i<len; i++) {
+      uint64[] memory _counts = new uint64[](dictsLen);
+      for(uint i=0; i<dictsLen; i++) {
         _counts[i] = IkhaaliDictionaryV2(_dicts[i]).wordCount();
       }
       uint256 _stripped = _stripMask(_mask, _max);
       _verifyMilestones(_counts, _miles, _stripped);
       milestones = _miles;
       bitmask = _stripped;
+      maxMilestone = _max;
 
       /// @dev finally, save the dictionary references
-      for(uint i=0; i<len; i++) {
+      for(uint i=0; i<dictsLen; i++) {
         IkhaaliDictionaryV2 _dict = IkhaaliDictionaryV2(_dicts[i]);
         dictionaries.push(_dict);
         bytes12 _hash = bytes12(
@@ -69,11 +81,6 @@ contract khaaliNamesV2 is IkhaaliNamesV2, ERC165, khaaliDeprecationV1 {
 
     }
 
-  }
-
-  function _setupDefault() private {
-    // TODO: color, animal, and adjective dictionaries with V1 milestones
-    // see https://github.com/thisispalash/rootcamp-capstone/blob/account/src/khaaliNamesV1.sol
   }
 
   /// Strip the non-relevant bits out of the full 32-byte word
@@ -106,16 +113,7 @@ contract khaaliNamesV2 is IkhaaliNamesV2, ERC165, khaaliDeprecationV1 {
     uint80 _prev = 0;
     for(uint i=0; i<_miles.length; i++) {
 
-      /// @dev Get the combination pattern using bit operations
-      uint16 _temp = uint16(
-        (
-          _strippedMask
-          &
-          (2 ** (MAX_DICTIONARIES * (i+1)) - 1)
-        ) /// @dev extract `MAX_DICTIONARIES` bits of interest
-        >>
-        MAX_DICTIONARIES * i /// @dev move to LSB before downcast
-      );
+      uint16 _temp = _getRelevantBits(_strippedMask, i);
 
       require(_temp != 0x0, MilestoneMaskCannotBeZero());
       require(_miles[i] > _prev, FutureMilestoneMustBeGreater());
@@ -126,10 +124,11 @@ contract khaaliNamesV2 is IkhaaliNamesV2, ERC165, khaaliDeprecationV1 {
       uint80 combinations = 1;
       for(uint j=0; j<_counts.length; j++) {
         if(_temp & 2**j != 0) combinations *= _counts[j];
+        if(combinations >= _miles[i]) break; /// @dev exit early -> no overflow
       }
       require(
         combinations >= _miles[i],
-        MilestoneNotAchievable(Milestone(uint8(i)), _miles[i], combinations)
+        MilestoneNotAchievable(Milestone(uint8(i) + 1), _miles[i], combinations)
       );
 
     }
@@ -149,7 +148,7 @@ contract khaaliNamesV2 is IkhaaliNamesV2, ERC165, khaaliDeprecationV1 {
     return (
       index + 1,
       milestones[index],
-      uint16(bitmask & (2 ** (MAX_DICTIONARIES * (index+1)) - 1))
+      _getRelevantBits(bitmask, index)
     );
   }
 
@@ -182,6 +181,23 @@ contract khaaliNamesV2 is IkhaaliNamesV2, ERC165, khaaliDeprecationV1 {
 
 
   ////////// Internal Functions //////////
+
+  /// @dev Get the combination pattern using bit operations
+  function _getRelevantBits(uint256 _mask, uint256 _index)
+    internal
+    pure
+    returns (uint16)
+  {
+    return uint16(
+      (
+        _mask
+        &
+        (2 ** (MAX_DICTIONARIES * (_index+1)) - 1)
+      ) /// @dev extract `MAX_DICTIONARIES` bits of interest
+      >>
+      MAX_DICTIONARIES * _index /// @dev move to LSB before downcast
+    );
+  }
 
   function _generate(address _r, Milestone _m, uint256 _s)
     internal

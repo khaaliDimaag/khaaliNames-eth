@@ -35,10 +35,13 @@ enum Milestone {
 
 interface IkhaaliNamesV2 is IERC165 {
 
+  error DictionaryListEmpty();
   error TooManyDictionaries();
   error DictionaryMustBeUnique();
   error UnsupportedDictionaryInterface(address dictionary);
 
+  error TooManyMilestons();
+  error MilestoneMismatch();
   error MilestoneCannotBeZero();
   error MaxMilestoneCannotBeZero();
   error MilestoneMaskCannotBeZero();

@@ -17,6 +17,8 @@ interface IkhaaliDeprecationV1 is IERC165 {
 
   ////////// Errors //////////
 
+  error Unimplemented();
+
   error ContractAbandoned();
   error ContractDeprecated(address newAddress);
 
