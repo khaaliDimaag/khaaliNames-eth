@@ -4,3 +4,6 @@
 [submodule "contracts/lib/solady"]
 	path = contracts/lib/solady
 	url = https://github.com/Vectorized/solady
+[submodule "contracts/lib/ENSv2"]
+	path = contracts/lib/ENSv2
+	url = https://github.com/ensdomains/contracts-v2
